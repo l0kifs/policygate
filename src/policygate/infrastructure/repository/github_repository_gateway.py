@@ -6,6 +6,7 @@ import json
 import shutil
 import tarfile
 import tempfile
+import threading
 import time
 from io import BytesIO
 from pathlib import Path
@@ -36,26 +37,29 @@ class GitHubRepositoryGateway:
         self._local_repo_data_dir = Path(local_repo_data_dir).expanduser().resolve()
         self._refresh_interval_seconds = max(refresh_interval_seconds, 1)
         self._last_refresh_check_at = 0.0
+        self._refresh_lock = threading.Lock()
 
         self._owner, self._repo = self._parse_owner_repo(repository_url)
         self._metadata_file = self._local_repo_data_dir / ".policygate_sync.json"
 
     def refresh_if_needed(self) -> None:
         """Refresh local cache if check interval elapsed and commit changed."""
-        now = time.time()
-        if (
-            now - self._last_refresh_check_at < self._refresh_interval_seconds
-            and self._local_repo_data_dir.exists()
-        ):
-            return
+        with self._refresh_lock:
+            now = time.time()
+            if (
+                now - self._last_refresh_check_at < self._refresh_interval_seconds
+                and self._local_repo_data_dir.exists()
+            ):
+                return
 
-        self._last_refresh_check_at = now
-        self._refresh(force=not self._local_repo_data_dir.exists())
+            self._last_refresh_check_at = now
+            self._refresh(force=not self._local_repo_data_dir.exists())
 
     def force_refresh(self) -> None:
         """Force synchronization regardless of refresh interval and cached SHA."""
-        self._refresh(force=True)
-        self._last_refresh_check_at = time.time()
+        with self._refresh_lock:
+            self._refresh(force=True)
+            self._last_refresh_check_at = time.time()
 
     def read_text(self, relative_path: str) -> str:
         """Read text file from synchronized local repository cache."""
@@ -115,8 +119,9 @@ class GitHubRepositoryGateway:
             repository_payload = repository_response.json()
 
             default_branch = repository_payload["default_branch"]
-            tarball_url = repository_payload["tarball_url"].replace(
-                "{/ref}", f"/{default_branch}"
+            tarball_url = self._resolve_tarball_url(
+                repository_payload=repository_payload,
+                default_branch=default_branch,
             )
 
             commit_response = client.get(
@@ -126,6 +131,27 @@ class GitHubRepositoryGateway:
             latest_sha = commit_response.json()["sha"]
 
         return default_branch, latest_sha, tarball_url
+
+    def _resolve_tarball_url(
+        self,
+        repository_payload: dict,
+        default_branch: str,
+    ) -> str:
+        tarball_url = repository_payload.get("tarball_url")
+        if isinstance(tarball_url, str) and tarball_url:
+            if "{/ref}" in tarball_url:
+                return tarball_url.replace("{/ref}", f"/{default_branch}")
+            return tarball_url
+
+        archive_url = repository_payload.get("archive_url")
+        if isinstance(archive_url, str) and archive_url:
+            url = archive_url.replace("{/archive_format}", "/tarball")
+            url = url.replace("{archive_format}", "tarball")
+            if "{/ref}" in url:
+                return url.replace("{/ref}", f"/{default_branch}")
+            return url.rstrip("/") + f"/{default_branch}"
+
+        return f"https://api.github.com/repos/{self._owner}/{self._repo}/tarball/{default_branch}"
 
     def _download_and_extract(self, tarball_url: str) -> None:
         headers = self._build_headers()
@@ -146,28 +172,41 @@ class GitHubRepositoryGateway:
                 raise RepositorySyncError("unable to extract repository archive")
 
             source_root = extracted_roots[0]
-            required_entries = ["router.yaml", "rules", "scripts"]
+            self._copy_repository_entries(source_root)
 
-            self._local_repo_data_dir.mkdir(parents=True, exist_ok=True)
-            for child in list(self._local_repo_data_dir.iterdir()):
-                if child.name == self._metadata_file.name:
-                    continue
-                if child.is_dir():
-                    shutil.rmtree(child)
-                else:
-                    child.unlink()
+    def _copy_repository_entries(self, source_root: Path) -> None:
+        required_entries = ["router.yaml", "rules"]
+        optional_entries = ["scripts"]
 
-            for entry in required_entries:
-                source_path = source_root / entry
-                if not source_path.exists():
-                    raise RepositorySyncError(
-                        f"repository is missing required entry: {entry}"
-                    )
-                target_path = self._local_repo_data_dir / entry
-                if source_path.is_dir():
-                    shutil.copytree(source_path, target_path, dirs_exist_ok=True)
-                else:
-                    shutil.copy2(source_path, target_path)
+        self._local_repo_data_dir.mkdir(parents=True, exist_ok=True)
+        for child in list(self._local_repo_data_dir.iterdir()):
+            if child.name == self._metadata_file.name:
+                continue
+            if child.is_dir():
+                shutil.rmtree(child)
+            else:
+                child.unlink()
+
+        for entry in required_entries:
+            source_path = source_root / entry
+            if not source_path.exists():
+                raise RepositorySyncError(
+                    f"repository is missing required entry: {entry}"
+                )
+            self._copy_entry(source_path=source_path, target_name=entry)
+
+        for entry in optional_entries:
+            source_path = source_root / entry
+            if not source_path.exists():
+                continue
+            self._copy_entry(source_path=source_path, target_name=entry)
+
+    def _copy_entry(self, source_path: Path, target_name: str) -> None:
+        target_path = self._local_repo_data_dir / target_name
+        if source_path.is_dir():
+            shutil.copytree(source_path, target_path, dirs_exist_ok=True)
+        else:
+            shutil.copy2(source_path, target_path)
 
     def _resolve_relative_path(self, relative_path: str) -> Path:
         if not relative_path:
