@@ -94,7 +94,7 @@ VS Code workspace MCP config example (`.vscode/mcp.json`):
         "policygate": {
             "type": "stdio",
             "command": "uvx",
-            "args": ["--from", "policygate:latest", "policygate-mcp"],
+            "args": ["--from", "policygate@latest", "policygate-mcp"],
             "env": {
                 "POLICYGATE__GITHUB_REPOSITORY_URL": "${input:POLICYGATE__GITHUB_REPOSITORY_URL}",
                 "POLICYGATE__GITHUB_ACCESS_TOKEN": "${input:POLICYGATE__GITHUB_ACCESS_TOKEN}"
