@@ -1,0 +1,28 @@
+{
+    "inputs": [
+		{
+			"id": "POLICYGATE__GITHUB_REPOSITORY_URL",
+			"type": "promptString",
+			"description": "GitHub repository URL",
+			"password": false
+		},
+		{
+			"id": "POLICYGATE__GITHUB_ACCESS_TOKEN",
+			"type": "promptString",
+			"description": "GitHub access token",
+			"password": true
+		}
+	],
+	"servers": {
+		"policygate-local": {
+			"type": "stdio",
+			"command": "uv",
+			"args": ["run", "policygate-mcp"],
+            "env": {
+				"POLICYGATE__GITHUB_REPOSITORY_URL": "${input:POLICYGATE__GITHUB_REPOSITORY_URL}",
+				"POLICYGATE__GITHUB_ACCESS_TOKEN": "${input:POLICYGATE__GITHUB_ACCESS_TOKEN}"
+			},
+			"cwd": "${workspaceFolder}"
+		}
+	}
+}
