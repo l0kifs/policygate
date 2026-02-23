@@ -76,6 +76,8 @@ def test_outline_router_returns_router_document() -> None:
     assert "## Rules" in outlined
     assert "## Scripts" in outlined
     assert "### task1" in outlined
+    assert "**rule1**: Rule one" in outlined
+    assert "rules/rule1.md" not in outlined
     assert gateway.refresh_calls == 1
 
 

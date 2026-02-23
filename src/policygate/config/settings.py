@@ -18,7 +18,7 @@ class Settings(BaseSettings):
 
     # Application settings
     app_name: str = Field(default="policygate", description="Application name")
-    app_version: str = Field(default="0.1.1", description="Application version")
+    app_version: str = Field(default="0.1.2", description="Application version")
 
     # GitHub repository integration
     github_repository_url: str = Field(

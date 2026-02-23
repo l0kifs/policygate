@@ -137,7 +137,7 @@ class PolicyGatewayService:
             sections.append("- _none_")
         else:
             for name, rule in router.rules.items():
-                sections.append(f"- **{name}**: `{rule.path}` — {rule.description}")
+                sections.append(f"- **{name}**: {rule.description}")
 
         sections.append("## Scripts")
         if not router.scripts:
