@@ -33,6 +33,28 @@ scripts/
 router.yaml
 ```
 
+`router.yaml` structure:
+
+```yaml
+tasks:
+	task1:
+		description: "Short description of task 1"
+		rules:
+			- rule1
+		scripts:
+			- script1
+
+rules:
+	rule1:
+		path: rules/rule1.md
+		description: "Short description of rule 1"
+
+scripts:
+	script1:
+		path: scripts/script1.py
+		description: "Short description of script 1"
+```
+
 ## Configuration
 
 Set environment variables:
