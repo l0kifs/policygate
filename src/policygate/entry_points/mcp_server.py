@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import asdict, is_dataclass
+from functools import lru_cache
 from typing import Annotated, Any
 
 from fastmcp import FastMCP
@@ -39,6 +40,7 @@ mcp = FastMCP(
 )
 
 
+@lru_cache(maxsize=1)
 def build_service() -> PolicyGatewayService:
     """Build service graph with GitHub-backed repository gateway."""
     settings = get_settings()
@@ -89,7 +91,7 @@ def read_rules(
         Field(
             description=(
                 "Rule aliases from router.yaml rules section. "
-                "Example: [\"rule1\", \"rule_security\"]"
+                'Example: ["rule1", "rule_security"]'
             )
         ),
     ],

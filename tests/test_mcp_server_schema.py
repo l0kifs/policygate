@@ -3,8 +3,13 @@
 from __future__ import annotations
 
 import asyncio
+from types import SimpleNamespace
 
-from policygate.entry_points.mcp_server import mcp
+import pytest
+
+from policygate.entry_points import mcp_server
+
+mcp = mcp_server.mcp
 
 
 def test_outline_router_tool_registered() -> None:
@@ -43,3 +48,31 @@ def test_copy_scripts_schema_has_string_items() -> None:
     schema = asyncio.run(_get_schema())
     assert schema["type"] == "array"
     assert schema["items"]["type"] == "string"
+
+
+def test_build_service_reuses_cached_instance(monkeypatch: pytest.MonkeyPatch) -> None:
+    gateway_init_calls = 0
+
+    class FakeGateway:
+        def __init__(self, **_: object) -> None:
+            nonlocal gateway_init_calls
+            gateway_init_calls += 1
+
+    fake_settings = SimpleNamespace(
+        github_repository_url="https://github.com/owner/repo",
+        github_access_token="token",
+        local_repo_data_dir="~/.policygate/repo_data",
+        repository_refresh_interval_seconds=1800,
+    )
+
+    monkeypatch.setattr(mcp_server, "get_settings", lambda: fake_settings)
+    monkeypatch.setattr(mcp_server, "GitHubRepositoryGateway", FakeGateway)
+    mcp_server.build_service.cache_clear()
+
+    first = mcp_server.build_service()
+    second = mcp_server.build_service()
+
+    assert first is second
+    assert gateway_init_calls == 1
+
+    mcp_server.build_service.cache_clear()

@@ -62,7 +62,7 @@ Set environment variables:
 - `POLICYGATE__GITHUB_REPOSITORY_URL`
 - `POLICYGATE__GITHUB_ACCESS_TOKEN`
 - `POLICYGATE__LOCAL_REPO_DATA_DIR` (optional, default `~/.policygate/repo_data`)
-- `POLICYGATE__REPOSITORY_REFRESH_INTERVAL_SECONDS` (optional, default `60`)
+- `POLICYGATE__REPOSITORY_REFRESH_INTERVAL_SECONDS` (optional, default `1800`)
 
 ## Run MCP server
 

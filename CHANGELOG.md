@@ -5,6 +5,15 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.1] - 2026-02-23
+
+### Added
+- Regression test to ensure MCP service construction is cached across tool calls.
+
+### Changed
+- Reused a single cached service instance in MCP entrypoint to preserve repository refresh interval behavior between requests.
+- Updated documentation default for `POLICYGATE__REPOSITORY_REFRESH_INTERVAL_SECONDS` from `60` to `1800` to match runtime settings.
+
 ## [0.1.0] - 2026-02-23
 
 ### Added
@@ -20,3 +29,4 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Enhanced package metadata in `pyproject.toml` for PyPI publishing.
 
 [0.1.0]: https://github.com/l0kifs/policygate/releases/tag/v0.1.0
+[0.1.1]: https://github.com/l0kifs/policygate/compare/v0.1.0...v0.1.1

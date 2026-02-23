@@ -4,7 +4,7 @@ build-backend = "uv_build"
 
 [project]
 name = "policygate"
-version = "0.1.0"
+version = "0.1.1"
 description = "MCP server gateway for task-specific AI rules and scripts stored in GitHub"
 readme = "README.md"
 license = { file = "LICENSE" }

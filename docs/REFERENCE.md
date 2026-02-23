@@ -14,7 +14,7 @@
 ## Optional Environment Variables
 
 - `POLICYGATE__LOCAL_REPO_DATA_DIR` (default: `~/.policygate/repo_data`)
-- `POLICYGATE__REPOSITORY_REFRESH_INTERVAL_SECONDS` (default: `60`)
+- `POLICYGATE__REPOSITORY_REFRESH_INTERVAL_SECONDS` (default: `1800`)
 
 ## Tools
 
