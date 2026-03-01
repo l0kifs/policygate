@@ -3,7 +3,6 @@
 </p>
 
 <p align="center">
-    <a href="https://github.com/l0kifs/policygate/actions/workflows/publish-to-pypi.yml"><img src="https://img.shields.io/github/actions/workflow/status/l0kifs/policygate/publish-to-pypi.yml?branch=main&label=publish" alt="Publish workflow" /></a>
     <a href="https://pypi.org/project/policygate/"><img src="https://img.shields.io/pypi/v/policygate" alt="PyPI version" /></a>
     <a href="https://pypi.org/project/policygate/"><img src="https://img.shields.io/pypi/pyversions/policygate" alt="Python versions" /></a>
     <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="MIT license" /></a>
