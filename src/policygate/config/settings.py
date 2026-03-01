@@ -18,7 +18,12 @@ class Settings(BaseSettings):
 
     # Application settings
     app_name: str = Field(default="policygate", description="Application name")
-    app_version: str = Field(default="0.1.2", description="Application version")
+    app_version: str = Field(default="0.1.3", description="Application version")
+    log_level: str = Field(default="INFO", description="Logging level")
+    log_file_path: str = Field(
+        default="~/.policygate/policygate.log",
+        description="Log file path",
+    )
 
     # GitHub repository integration
     github_repository_url: str = Field(

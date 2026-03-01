@@ -9,11 +9,15 @@ from typing import Annotated, Any
 from fastmcp import FastMCP
 from pydantic import Field
 
+from policygate.config.logging import logger, setup_logging
 from policygate.config.settings import get_settings
 from policygate.domains.gateway.services import PolicyGatewayService
 from policygate.infrastructure.repository.github_repository_gateway import (
     GitHubRepositoryGateway,
 )
+
+settings = get_settings()
+setup_logging(settings)
 
 
 def _to_serializable(value: Any) -> Any:
@@ -34,7 +38,7 @@ mcp = FastMCP(
         "Policy gateway for task routing. Use router outline first, then read rules, "
         "and copy scripts only for scripts explicitly mapped in router.yaml."
     ),
-    version=get_settings().app_version,
+    version=settings.app_version,
     on_duplicate="error",
     mask_error_details=False,
 )
@@ -44,6 +48,7 @@ mcp = FastMCP(
 def build_service() -> PolicyGatewayService:
     """Build service graph with GitHub-backed repository gateway."""
     settings = get_settings()
+    logger.info("Building policy gateway service")
     return PolicyGatewayService(
         repository_gateway=GitHubRepositoryGateway(
             repository_url=settings.github_repository_url,
@@ -63,6 +68,7 @@ def build_service() -> PolicyGatewayService:
 )
 def outline_router() -> str:
     """Parse and return router.yaml contents as markdown text."""
+    logger.debug("Tool call: outline_router")
     return build_service().outline_router()
 
 
@@ -75,6 +81,7 @@ def outline_router() -> str:
 )
 def sync_repository() -> dict[str, str]:
     """Force repository synchronization to refresh local cache now."""
+    logger.info("Tool call: sync_repository")
     return build_service().sync_repository()
 
 
@@ -97,6 +104,7 @@ def read_rules(
     ],
 ) -> str:
     """Read selected rules and return a combined markdown document."""
+    logger.debug("Tool call: read_rules", extra={"rule_count": len(rule_names)})
     return build_service().read_rules(rule_names=rule_names)
 
 
@@ -114,9 +122,11 @@ def copy_scripts(
     ],
 ) -> dict[str, Any]:
     """Copy selected scripts to a temporary directory for execution."""
+    logger.info("Tool call: copy_scripts", extra={"script_count": len(script_names)})
     return _to_serializable(build_service().copy_scripts(script_names=script_names))
 
 
 def run() -> None:
     """Run MCP server."""
+    logger.info("Starting MCP server", extra={"app_version": settings.app_version})
     mcp.run()

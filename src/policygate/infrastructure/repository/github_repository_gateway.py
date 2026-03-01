@@ -14,6 +14,7 @@ from urllib.parse import urlparse
 
 import httpx
 
+from policygate.config.logging import logger
 from policygate.domains.gateway.exceptions import RepositorySyncError
 
 
@@ -42,6 +43,15 @@ class GitHubRepositoryGateway:
         self._owner, self._repo = self._parse_owner_repo(repository_url)
         self._metadata_file = self._local_repo_data_dir / ".policygate_sync.json"
 
+        logger.info(
+            "Initialized GitHub repository gateway",
+            extra={
+                "repository": f"{self._owner}/{self._repo}",
+                "local_repo_data_dir": str(self._local_repo_data_dir),
+                "refresh_interval_seconds": self._refresh_interval_seconds,
+            },
+        )
+
     def refresh_if_needed(self) -> None:
         """Refresh local cache if check interval elapsed and commit changed."""
         with self._refresh_lock:
@@ -50,24 +60,31 @@ class GitHubRepositoryGateway:
                 now - self._last_refresh_check_at < self._refresh_interval_seconds
                 and self._local_repo_data_dir.exists()
             ):
+                logger.debug("Skipped refresh check due to interval")
                 return
 
             self._last_refresh_check_at = now
+            logger.info("Running conditional repository refresh")
             self._refresh(force=not self._local_repo_data_dir.exists())
 
     def force_refresh(self) -> None:
         """Force synchronization regardless of refresh interval and cached SHA."""
         with self._refresh_lock:
+            logger.info("Running forced repository refresh")
             self._refresh(force=True)
             self._last_refresh_check_at = time.time()
 
     def read_text(self, relative_path: str) -> str:
         """Read text file from synchronized local repository cache."""
+        logger.debug("Reading text file", extra={"relative_path": relative_path})
         target = self._resolve_relative_path(relative_path)
         return target.read_text(encoding="utf-8")
 
     def read_many_texts(self, relative_paths: list[str]) -> dict[str, str]:
         """Read multiple files from local repository cache."""
+        logger.debug(
+            "Reading multiple files", extra={"file_count": len(relative_paths)}
+        )
         content_by_path: dict[str, str] = {}
         for relative_path in relative_paths:
             target = self._resolve_relative_path(relative_path)
@@ -80,6 +97,13 @@ class GitHubRepositoryGateway:
         destination_directory: str,
     ) -> list[str]:
         """Copy files from local cache to destination directory."""
+        logger.info(
+            "Copying files from cache",
+            extra={
+                "file_count": len(relative_paths),
+                "destination_directory": destination_directory,
+            },
+        )
         destination = Path(destination_directory).resolve()
         destination.mkdir(parents=True, exist_ok=True)
 
@@ -96,8 +120,13 @@ class GitHubRepositoryGateway:
         cached_sha = self._read_cached_sha()
 
         if not force and cached_sha == latest_sha:
+            logger.debug("Repository cache is up to date", extra={"sha": latest_sha})
             return
 
+        logger.info(
+            "Refreshing local repository cache",
+            extra={"default_branch": default_branch, "sha": latest_sha},
+        )
         self._download_and_extract(tarball_url=tarball_url)
         self._write_metadata(
             {
@@ -110,6 +139,7 @@ class GitHubRepositoryGateway:
 
     def _get_repository_state(self) -> tuple[str, str, str]:
         headers = self._build_headers()
+        logger.debug("Fetching repository state from GitHub")
 
         with httpx.Client(timeout=30.0, headers=headers) as client:
             repository_response = client.get(
@@ -154,6 +184,7 @@ class GitHubRepositoryGateway:
         return f"https://api.github.com/repos/{self._owner}/{self._repo}/tarball/{default_branch}"
 
     def _download_and_extract(self, tarball_url: str) -> None:
+        logger.info("Downloading repository archive")
         headers = self._build_headers()
         with httpx.Client(
             timeout=60.0, headers=headers, follow_redirects=True
@@ -173,10 +204,15 @@ class GitHubRepositoryGateway:
 
             source_root = extracted_roots[0]
             self._copy_repository_entries(source_root)
+            logger.info("Repository archive extracted and copied")
 
     def _copy_repository_entries(self, source_root: Path) -> None:
         required_entries = ["router.yaml", "rules"]
         optional_entries = ["scripts"]
+
+        logger.debug(
+            "Copying repository entries", extra={"source_root": str(source_root)}
+        )
 
         self._local_repo_data_dir.mkdir(parents=True, exist_ok=True)
         for child in list(self._local_repo_data_dir.iterdir()):
@@ -230,6 +266,7 @@ class GitHubRepositoryGateway:
             return None
 
     def _write_metadata(self, payload: dict[str, str | int]) -> None:
+        logger.debug("Writing sync metadata")
         self._metadata_file.parent.mkdir(parents=True, exist_ok=True)
         self._metadata_file.write_text(
             json.dumps(payload, ensure_ascii=False, indent=2),

@@ -8,6 +8,7 @@ from typing import Protocol
 import yaml
 from pydantic import ValidationError
 
+from policygate.config.logging import logger
 from policygate.domains.gateway.exceptions import (
     RepositorySyncError,
     RouterReferenceError,
@@ -42,23 +43,29 @@ class PolicyGatewayService:
 
     def outline_router(self) -> str:
         """Return parsed and validated router.yaml content as markdown text."""
+        logger.info("Generating router outline")
         router = self._load_router()
         return self._router_to_markdown(router)
 
     def sync_repository(self) -> dict[str, str]:
         """Force synchronization of remote repository to local cache."""
+        logger.info("Forcing repository sync")
         self._repository_gateway.force_refresh()
         return {"status": "synced"}
 
     def read_rules(self, rule_names: list[str]) -> str:
         """Return rule markdown content by aliases from router.yaml as markdown text."""
         if not rule_names:
+            logger.debug("No rules requested")
             return ""
+
+        logger.info("Reading rules", extra={"rule_count": len(rule_names)})
 
         router = self._load_router()
         missing = [name for name in rule_names if name not in router.rules]
         if missing:
             joined = ", ".join(missing)
+            logger.warning("Unknown rule aliases requested", extra={"aliases": joined})
             raise RouterReferenceError(f"unknown rule aliases: {joined}")
 
         names_to_paths = {name: router.rules[name].path for name in rule_names}
@@ -77,15 +84,24 @@ class PolicyGatewayService:
         """Copy script files by aliases to a temporary directory."""
         if not script_names:
             destination = tempfile.mkdtemp(prefix="policygate-scripts-")
+            logger.debug(
+                "No scripts requested, created destination only",
+                extra={"destination_directory": destination},
+            )
             return CopiedScriptsResult(
                 destination_directory=destination,
                 copied_files=[],
             )
 
+        logger.info("Copying scripts", extra={"script_count": len(script_names)})
+
         router = self._load_router()
         missing = [name for name in script_names if name not in router.scripts]
         if missing:
             joined = ", ".join(missing)
+            logger.warning(
+                "Unknown script aliases requested", extra={"aliases": joined}
+            )
             raise RouterReferenceError(f"unknown script aliases: {joined}")
 
         destination = tempfile.mkdtemp(prefix="policygate-scripts-")
@@ -102,6 +118,7 @@ class PolicyGatewayService:
 
     def _load_router(self) -> RouterConfig:
         try:
+            logger.debug("Loading router configuration")
             self._repository_gateway.refresh_if_needed()
             router_raw = self._repository_gateway.read_text("router.yaml")
             parsed = yaml.safe_load(router_raw)
@@ -111,8 +128,10 @@ class PolicyGatewayService:
                 )
             return RouterConfig.model_validate(parsed)
         except ValidationError as error:
+            logger.error("Router validation failed", exc_info=error)
             raise RouterValidationError(str(error)) from error
         except OSError as error:
+            logger.error("Repository sync error while loading router", exc_info=error)
             raise RepositorySyncError(str(error)) from error
 
     def _router_to_markdown(self, router: RouterConfig) -> str:

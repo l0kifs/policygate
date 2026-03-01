@@ -5,6 +5,17 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.3] - 2026-03-02
+
+### Added
+- Centralized logging configuration with outputs to stderr and `~/.policygate/policygate.log`.
+- New optional settings: `POLICYGATE__LOG_LEVEL` and `POLICYGATE__LOG_FILE_PATH`.
+- Regression test for logging setup to verify log directory and file creation.
+
+### Changed
+- Unified runtime logging usage across service, MCP entry point, and repository gateway via shared logger configuration.
+- Added operational logging for tool execution, repository synchronization, and router-loading paths.
+
 ## [0.1.2] - 2026-02-23
 
 ### Changed
@@ -39,3 +50,4 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 [0.1.0]: https://github.com/l0kifs/policygate/releases/tag/v0.1.0
 [0.1.1]: https://github.com/l0kifs/policygate/compare/v0.1.0...v0.1.1
 [0.1.2]: https://github.com/l0kifs/policygate/compare/v0.1.1...v0.1.2
+[0.1.3]: https://github.com/l0kifs/policygate/compare/v0.1.2...v0.1.3

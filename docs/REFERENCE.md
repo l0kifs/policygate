@@ -15,6 +15,8 @@
 
 - `POLICYGATE__LOCAL_REPO_DATA_DIR` (default: `~/.policygate/repo_data`)
 - `POLICYGATE__REPOSITORY_REFRESH_INTERVAL_SECONDS` (default: `1800`)
+- `POLICYGATE__LOG_LEVEL` (default: `INFO`)
+- `POLICYGATE__LOG_FILE_PATH` (default: `~/.policygate/policygate.log`)
 
 ## Tools
 
